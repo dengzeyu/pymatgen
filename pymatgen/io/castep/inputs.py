@@ -16,8 +16,8 @@ from pymatgen.io.castep.constants import CellKeyword, ParamKeyword, OTFPseudopot
 
 """
 This module provides an interface between pymatgen and the CASTEP (http://www.castep.org)
-electronic structure code for the purposes of generating input files or parsing output files, pymatgen 
-does not offer any capability to run CASTEP directly. To run or use CASTEP, an appropriate license has 
+electronic structure code for the purposes of generating input files or parsing output files, pymatgen
+does not offer any capability to run CASTEP directly. To run or use CASTEP, an appropriate license has
 to be obtained from the CASTEP developers.
 
 "First principles methods using CASTEP", Zeitschrift fuer Kristallographie 220(5-6) pp. 567-570 (2005)
@@ -129,15 +129,7 @@ class Cell(MSONable):
         Returns: The string representation Cell, i.e. the contents of the .cell file
         """
 
-        lines = []
-
-        for tag, content in self.tags.items():
-            if content.comment in (None, ""):
-                lines.append("{0: <24}: {1}".format(tag.name.lower(), " ".join(content.value)))
-            else:
-                lines.append(
-                    "{0: <24}: {1: <16} ! {2}".format(tag.name.lower(), " ".join(content.value), content.comment)
-                )
+        lines = ["! CASTEP input generated using pymatgen\n! Modified by: Zeyu Deng\n! Email: dengzeyu@gmail.com"]
         for block, content in self.blocks.items():
             lines.append("\n%block {}".format(block.name.lower()))
             if content.comments is None:
@@ -152,6 +144,17 @@ class Cell(MSONable):
                 lines.append(line)
 
             lines.append("%endblock {}".format(block.name.lower()))
+
+        lines.append('\n')
+        for tag, content in self.tags.items():
+            if not content:
+                lines.append("{0: <24}".format(tag.name.lower()))
+            elif content.comment in (None, ""):
+                lines.append("{0: <24}: {1}".format(tag.name.lower(), "".join(content.value)))
+            else:
+                lines.append(
+                    "{0: <24}: {1: <16} ! {2}".format(tag.name.lower(), "".join(content.value), content.comment)
+                )
 
         return "\n".join(lines)
 
@@ -453,3 +456,27 @@ class Param(MSONable):
         for name, value in tags.items():
             param.set_tag(name, value)
         return param
+
+    def __str__(self):
+        """
+        Returns: The string parameter file, i.e. the contents of the .param file
+        """
+
+        lines = []
+
+        for tag, content in self.tags.items():
+            if content: # if content is not None
+                lines.append("{0: <24}: {1}".format(tag.name, "".join(content.value)))
+            else:
+                lines.append(tag.name)
+        return "\n".join(lines)
+
+    def write_file(self, filename):
+        """
+        Write the .param file
+
+        Args:
+            filename: filename for the .param file
+        """
+        with zopen(filename, "wt") as f:
+            f.write(str(self))
